@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Creascola Credit Leaderboard</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root{
+      --bg1:#0a0f1a;
+      --bg2:#1c2a48;
+      --card:#222;
+      --accent:#00f6ff;
+      --accent-2:#00c8d6;
+    }
+    body{
+      margin:0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color:#fff;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:20px;
+      min-height:100vh;
+      box-sizing:border-box;
+    }
+    h1{
+      margin:18px 0;
+      font-size:clamp(1.8rem,5vw,3rem);
+      color:var(--accent);
+      text-shadow:0 0 14px rgba(0,246,255,0.15);
+    }
+    .leaderboard{
+      width:100%;
+      max-width:760px;
+      background:rgba(34,34,34,0.92);
+      border-radius:18px;
+      padding:20px;
+      box-shadow:0 8px 30px rgba(0,246,255,0.06);
+      box-sizing:border-box;
+    }
+    .class-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+      font-size:clamp(1rem,2.4vw,1.3rem);
+      gap:8px;
+    }
+    .class-row .left{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .class-row .place{ font-weight:700; min-width:90px; text-align:left; }
+    .class-row .name{ font-weight:600; letter-spacing:0.6px; }
+    .class-row .pts{ font-weight:700; min-width:120px; text-align:right; font-variant-numeric:tabular-nums; }
+
+    .gold{   box-shadow:inset 0 0 18px rgba(255,215,0,0.06),   0 6px 18px rgba(255,215,0,0.04);   border-left:4px solid #ffd700; }
+    .silver{ box-shadow:inset 0 0 18px rgba(192,192,192,0.06), 0 6px 18px rgba(192,192,192,0.03); border-left:4px solid #c0c0c0; }
+    .bronze{ box-shadow:inset 0 0 18px rgba(205,127,50,0.05),  0 6px 18px rgba(205,127,50,0.03);  border-left:4px solid #cd7f32; }
+
+    #login-icon{
+      position:fixed; top:14px; right:14px; font-size:1.9rem;
+      background:transparent; border:none; color:var(--accent);
+      cursor:pointer; z-index:999; width:auto; max-width:none; padding:4px 8px;
+    }
+    #login-area{
+      display:none; position:fixed; top:64px; right:14px;
+      background:var(--card); padding:14px; border-radius:12px;
+      box-shadow:0 8px 26px rgba(0,0,0,0.6); width:320px; max-width:90%; z-index:998;
+    }
+    #login-area input, #points-area input, #points-area select{
+      width:92%; padding:10px; margin:8px 0; border-radius:8px;
+      border:none; text-align:center; font-size:1rem; box-sizing:border-box;
+    }
+    #points-area{ margin:18px auto 12px; display:block; max-width:520px; text-align:center; }
+
+    button{
+      background:var(--accent); border:none; padding:10px 16px; border-radius:10px;
+      color:#000; font-weight:700; cursor:pointer; transition:all .15s ease;
+      width:82%; max-width:260px;
+    }
+    button:hover{ background:var(--accent-2); }
+    #logout-btn{ margin-top:10px; background:#ff4444; color:#fff; }
+    #logout-btn:hover{ background:#cc0000; }
+    #undo-btn{ margin-top:10px; background:#ff9800; color:#000; }
+    #undo-btn:hover{ background:#e65100; color:#fff; }
+    #undo-btn:disabled{ background:#444; color:#777; cursor:not-allowed; }
+
+    .trend{ font-size:1.1rem; font-weight:700; min-width:28px; text-align:center; }
+    .trend.up{   color:#00e676; }
+    .trend.down{ color:#ff1744; }
+    .trend.same{ color:#888;    }
+
+    /* history */
+    #history-box{
+      width:100%; max-width:760px; background:rgba(34,34,34,0.85);
+      border-radius:18px; padding:18px 20px;
+      box-shadow:0 8px 30px rgba(0,246,255,0.04);
+      box-sizing:border-box; margin-top:18px;
+    }
+    #history-box h3{ margin:0 0 12px 0; color:var(--accent); font-size:1rem; letter-spacing:0.5px; }
+    .history-entry{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:7px 4px; border-bottom:1px solid rgba(255,255,255,0.04);
+      font-size:0.9rem; gap:8px;
+      opacity:0; animation:fadeIn 0.4s forwards;
+    }
+    .history-entry:last-child{ border-bottom:none; }
+    .history-entry .h-class{ font-weight:700; color:#fff; min-width:36px; }
+    .history-entry .h-change{ font-weight:700; min-width:56px; }
+    .history-entry .h-change.pos{ color:#00e676; }
+    .history-entry .h-change.neg{ color:#ff1744; }
+    .history-entry .h-time{ color:#888; font-size:0.82rem; text-align:right; }
+    @keyframes fadeIn{
+      from{ opacity:0; transform:translateY(-6px); }
+      to{   opacity:1; transform:translateY(0); }
+    }
+
+    /* help */
+    #help-btn{
+      position:fixed; bottom:18px; right:18px; width:42px; height:42px;
+      border-radius:50%; background:var(--accent); color:#000; font-size:1.3rem;
+      font-weight:700; border:none; cursor:pointer; z-index:999;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 4px 14px rgba(0,246,255,0.3); max-width:42px; padding:0;
+    }
+    #help-btn:hover{ background:var(--accent-2); }
+    #help-modal{
+      display:none; position:fixed; bottom:72px; right:18px;
+      background:var(--card); border-radius:14px; padding:16px 20px;
+      box-shadow:0 8px 26px rgba(0,0,0,0.6); z-index:998; width:240px; max-width:88vw;
+    }
+    #help-modal h4{ margin:0 0 10px 0; color:var(--accent); font-size:1rem; }
+    #help-modal .help-row{ display:flex; align-items:center; gap:10px; margin:8px 0; font-size:0.95rem; }
+
+    #reset-btn{ margin-top:10px; background:#8b0000; color:#fff; }
+    #reset-btn:hover{ background:#cc0000; }
+
+    /* test mode */
+    #test-banner{
+      display:none;
+      width:100%; max-width:760px;
+      background:repeating-linear-gradient(
+        45deg, rgba(255,152,0,0.12), rgba(255,152,0,0.12) 10px,
+        rgba(255,152,0,0.06) 10px, rgba(255,152,0,0.06) 20px
+      );
+      border:1px solid rgba(255,152,0,0.4);
+      border-radius:12px;
+      padding:10px 18px;
+      margin-bottom:12px;
+      font-size:0.88rem;
+      color:#ff9800;
+      font-weight:600;
+      text-align:center;
+      letter-spacing:0.03em;
+    }
+    .test-mode-label{
+      display:none;
+      font-size:0.72rem;
+      color:#ff9800;
+      margin-top:4px;
+      letter-spacing:0.04em;
+    }
+
+    /* reset confirmation modal */
+    #reset-modal{
+      display:none; position:fixed; inset:0;
+      background:rgba(0,0,0,0.75); z-index:1000;
+      align-items:center; justify-content:center;
+    }
+    #reset-modal-box{
+      background:#1a1a2e; border:1px solid rgba(255,255,255,0.1);
+      border-radius:16px; padding:28px 24px; width:320px; max-width:90vw;
+      text-align:center; box-shadow:0 12px 40px rgba(0,0,0,0.8);
+    }
+    #reset-modal-box h3{ margin:0 0 6px 0; color:#ff4444; font-size:1.1rem; }
+    #reset-modal-box p{ margin:0 0 16px 0; color:#aaa; font-size:0.9rem; line-height:1.4; }
+    #reset-password-input{
+      width:100%; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15);
+      background:#111; color:#fff; font-size:1rem; text-align:center;
+      box-sizing:border-box; margin-bottom:8px;
+    }
+    #reset-error{ color:#ff6b6b; font-size:0.88rem; min-height:1.2em; margin-bottom:10px; }
+    .reset-modal-btns{ display:flex; gap:10px; justify-content:center; }
+    .reset-modal-btns button{ margin-top:0; }
+    #reset-confirm-btn{ background:#cc0000; color:#fff; flex:1; }
+    #reset-confirm-btn:hover{ background:#ff0000; }
+    #reset-cancel-btn{ background:#444; color:#fff; flex:1; }
+    #reset-cancel-btn:hover{ background:#666; }
+
+    #confetti-canvas{
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      pointer-events:none; z-index:9999;
+    }
+
+    @media (max-width:520px){
+      .class-row{ padding:10px; font-size:1rem; }
+      .class-row .place{ min-width:72px; font-size:0.95rem; }
+      .class-row .pts{ min-width:96px; font-size:0.95rem; }
+      #login-area{ right:8px; top:60px; width:92%; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🏆 Creascola Credit Leaderboard</h1>
+
+  <button id="login-icon" onclick="toggleLogin()" aria-label="Open login">🔑</button>
+
+  <div id="login-area" aria-hidden="true">
+    <h3 style="margin:0 0 8px 0;color:var(--accent)">Login</h3>
+    <input id="username" type="text" placeholder="Username" autocomplete="off" />
+    <input id="password" type="password" placeholder="Password" autocomplete="off" />
+    <div style="display:flex;justify-content:center">
+      <button onclick="login()">Login</button>
+    </div>
+    <p id="login-status" style="margin:6px 0 0 0;font-size:0.95rem"></p>
+  </div>
+
+  <div id="points-area" style="display:none;">
+    <h3 style="margin:6px 0 8px 0">Add or Remove Points</h3>
+    <select id="class-select" aria-label="Choose class">
+      <option value="7A">7A</option>
+      <option value="6B">6B</option>
+      <option value="6A">6A</option>
+      <option value="5A">5A</option>
+      <option value="5B">5B</option>
+      <option value="8A">8A</option>
+    </select><br/>
+    <input id="points-input" type="text" placeholder="Enter points (e.g. 5 or -2)" />
+    <div style="display:flex;justify-content:center;flex-direction:column;align-items:center;gap:8px;">
+      <button onclick="updatePoints()">Update Points</button>
+      <div class="test-mode-label" id="test-mode-label">🧪 Simulated — nothing will be saved</div>
+      <button id="undo-btn" onclick="undoLast()" disabled>↩ Undo Last</button>
+      <button id="reset-btn" onclick="resetScores()">🗑 Reset All Scores</button>
+      <button onclick="window.location.href='logs.html'" style="margin-top:10px;background:#1a237e;color:#fff;">📋 Access Logs</button>
+      <button id="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div id="test-banner">🧪 TEST MODE ACTIVE — Changes are simulated and will NOT be saved to Firebase</div>
+  <div class="leaderboard" id="leaderboard" aria-live="polite"></div>
+
+  <div id="history-box" style="display:none;">
+    <h3>📋 Recent Changes</h3>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- reset confirmation modal -->
+  <div id="reset-modal">
+    <div id="reset-modal-box">
+      <h3> Reset All Scores</h3>
+      <p>This will set every class back to 0 and clear all history. Enter your password to confirm.</p>
+      <input id="reset-password-input" type="password" placeholder="Your password" autocomplete="off" />
+      <div id="reset-error"></div>
+      <div class="reset-modal-btns">
+        <button id="reset-cancel-btn" onclick="closeResetModal()">Cancel</button>
+        <button id="reset-confirm-btn" onclick="confirmReset()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="confetti-canvas"></canvas>
+  <button id="help-btn" onclick="toggleHelp()" aria-label="Help">?</button>
+  <div id="help-modal" aria-hidden="true">
+    <h4> What do the symbols mean?</h4>
+    <div class="help-row"><span style="color:#00e676;font-size:1.3rem">▲</span> The class moved up in the rankings</div>
+    <div class="help-row"><span style="color:#ff1744;font-size:1.3rem">▼</span> The class moved down in the rankings</div>
+    <div class="help-row"><span style="color:#888;font-size:1.3rem">—</span> No change in position</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db   = firebase.database();
+    const auth = firebase.auth();
+
+    const classes      = ["7A","6B","6A","5A","5B","8A"];
+    const EMAIL_DOMAIN  = "@creascola.hu";
+    const TEST_USER     = "balazs_kiss";
+    let   testMode      = false;
+    let   testScores    = null; // local copy for simulation
+    const HISTORY_LIMIT = 10;
+
+    let scores           = {};
+    let previousPositions = {};
+    let history          = [];
+    let lastSnapshot     = null;
+    let displayedScores  = {}; // tracks currently shown values for animation
+
+    // ── helpers ───────────────────────────────────────────────
+    function buildPositions(scoresObj){
+      const sorted = Object.entries(scoresObj)
+        .filter(([cls]) => classes.includes(cls))
+        .sort((a,b) => Number(b[1]) - Number(a[1]));
+      const pos = {};
+      sorted.forEach(([cls], i) => pos[cls] = i);
+      return pos;
+    }
+
+    function formatTime(ts){
+      if(!ts) return '';
+      const d = new Date(ts);
+      const pad = n => String(n).padStart(2,'0');
+      return `${pad(d.getHours())}:${pad(d.getMinutes())} · ${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+    }
+
+    function animateCounter(el, from, to, duration){
+      if(from === to){ el.textContent = to + ' pts'; return; }
+      const start = performance.now();
+      (function step(now){
+        const p    = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+        el.textContent = Math.round(from + (to - from) * ease) + ' pts';
+        if(p < 1) requestAnimationFrame(step);
+      })(start);
+    }
+
+    // ── auth ──────────────────────────────────────────────────
+    function toggleLogin(){
+      const area = document.getElementById('login-area');
+      const hidden = area.style.display === 'none' || area.style.display === '';
+      area.style.display = hidden ? 'block' : 'none';
+      area.setAttribute('aria-hidden', !hidden);
+    }
+
+    function login(){
+      const username = document.getElementById('username').value.trim().toLowerCase();
+      const pass     = document.getElementById('password').value;
+      const status   = document.getElementById('login-status');
+      if(!username || !pass){ status.textContent = "❌ Please enter username and password."; return; }
+      status.textContent = "⏳ Logging in...";
+      auth.signInWithEmailAndPassword(username + EMAIL_DOMAIN, pass)
+        .then(() => {
+          writeLog({ user: username, action: 'login' });
+          document.getElementById('login-area').style.display = 'none';
+          document.getElementById('username').value = '';
+          document.getElementById('password').value = '';
+        })
+        .catch(err => {
+          console.error("Login error:", err.code);
+          status.textContent = "❌ Wrong username or password.";
+        });
+    }
+
+    function logout(){
+      if(auth.currentUser){
+        const email = auth.currentUser.email;
+        const username = email.replace(EMAIL_DOMAIN, '');
+        writeLog({ user: username, action: 'logout' });
+      }
+      auth.signOut();
+    }
+
+    auth.onAuthStateChanged(user => {
+      document.getElementById('points-area').style.display = user ? 'block' : 'none';
+      if(user){
+        const username = user.email.replace(EMAIL_DOMAIN, '');
+        testMode = (username === TEST_USER);
+        document.getElementById('test-banner').style.display      = testMode ? 'block' : 'none';
+        document.getElementById('test-mode-label').style.display  = testMode ? 'block' : 'none';
+        document.getElementById('reset-btn').style.display        = testMode ? 'none'  : 'block';
+        if(testMode){
+          // clone real scores for local simulation
+          testScores = JSON.parse(JSON.stringify(scores));
+        }
+      } else {
+        testMode   = false;
+        testScores = null;
+        document.getElementById('test-banner').style.display     = 'none';
+        document.getElementById('test-mode-label').style.display = 'none';
+        document.getElementById('login-status').textContent      = '';
+        document.getElementById('history-box').style.display     = 'none';
+      }
+    });
+
+    // ── update points ─────────────────────────────────────────
+    function updatePoints(){
+      if(!auth.currentUser){ alert("Please log in first."); return; }
+      const selected = document.getElementById('class-select').value;
+      const raw      = document.getElementById('points-input').value.trim();
+      if(!/^[-+]?\d+$/.test(raw)){ alert("Please enter a valid integer (e.g. 5 or -2)."); return; }
+
+      const points       = parseInt(raw, 10);
+      const undoSnapshot = JSON.parse(JSON.stringify(scores));
+      const prevPositions = buildPositions(scores);
+
+      const newScores = JSON.parse(JSON.stringify(scores));
+      if(!newScores[selected]) newScores[selected] = 0;
+      newScores[selected] = Math.max(0, Number(newScores[selected]) + points);
+
+      const newHistory = [{
+        cls:    selected,
+        change: points,
+        before: Number(scores[selected] || 0),
+        after:  newScores[selected],
+        ts:     Date.now()
+      }, ...history].slice(0, HISTORY_LIMIT);
+
+      const logUser = auth.currentUser.email.replace(EMAIL_DOMAIN, '');
+      db.ref().update({
+        scores:            newScores,
+        previousPositions: prevPositions,
+        history:           newHistory,
+        undoSnapshot:      undoSnapshot
+      }).then(() => {
+        writeLog({
+          user:   logUser,
+          action: 'points',
+          class:  selected,
+          change: points,
+          before: Number(scores[selected] || 0),
+          after:  newScores[selected]
+        });
+      }).catch(err => { console.error("Write failed:", err); alert("Failed to save. Check console."); });
+
+      document.getElementById('points-input').value = '';
+    }
+
+    // ── undo ──────────────────────────────────────────────────
+    function undoLast(){
+      if(testMode){ alert("Undo is disabled in test mode."); return; }
+      if(!auth.currentUser || !lastSnapshot) return;
+      if(!confirm("Undo the last points change?")) return;
+      const revertedHistory = history.slice(1);
+      db.ref().update({
+        scores:            lastSnapshot,
+        previousPositions: buildPositions(lastSnapshot),
+        history:           revertedHistory.length ? revertedHistory : null,
+        undoSnapshot:      null
+      }).catch(err => { console.error("Undo failed:", err); alert("Undo failed."); });
+    }
+
+    // ── render leaderboard (true FLIP — rows stay in DOM) ───────
+    function renderLeaderboard(){
+      const lb = document.getElementById('leaderboard');
+      classes.forEach(c => { if(scores[c] === undefined) scores[c] = 0; });
+
+      const sorted = Object.entries(scores)
+        .filter(([cls]) => classes.includes(cls))
+        .sort((a,b) => Number(b[1]) - Number(a[1]));
+
+      // ensure header exists
+      if(!lb.querySelector('h3')){
+        const h = document.createElement('h3');
+        h.style.marginTop = '0';
+        h.textContent = 'Leaderboard';
+        lb.prepend(h);
+      }
+
+      // ensure a row exists for every class (create once, reuse always)
+      classes.forEach(cls => {
+        if(!lb.querySelector(`.class-row[data-cls="${cls}"]`)){
+          const row = document.createElement('div');
+          row.dataset.cls = cls;
+          row.className = 'class-row';
+          lb.appendChild(row);
+        }
+      });
+
+      // STEP 1 — record where every row is RIGHT NOW (before reorder)
+      const firstRects = {};
+      lb.querySelectorAll('.class-row[data-cls]').forEach(row => {
+        firstRects[row.dataset.cls] = row.getBoundingClientRect();
+      });
+
+      // STEP 2 — update content & reorder rows in DOM (appendChild moves existing nodes)
+      sorted.forEach(([cls, pts], index) => {
+        const numPts = Number(pts) || 0;
+        let placeLabel = '', rowClass = '';
+        if(index === 0)      { placeLabel = '🏆 1st'; rowClass = 'gold';   }
+        else if(index === 1) { placeLabel = '🥈 2nd'; rowClass = 'silver'; }
+        else if(index === 2) { placeLabel = '🥉 3rd'; rowClass = 'bronze'; }
+        else                 { placeLabel = (index+1) + '.'; }
+
+        let trendSymbol = '—', trendClass = 'same';
+        if(previousPositions[cls] !== undefined){
+          const prev = previousPositions[cls];
+          if(index < prev)      { trendSymbol = '▲'; trendClass = 'up'; }
+          else if(index > prev) { trendSymbol = '▼'; trendClass = 'down'; }
+        }
+
+        const row = lb.querySelector(`.class-row[data-cls="${cls}"]`);
+        row.className = 'class-row ' + rowClass;
+
+        // update inner content
+        let left = row.querySelector('.left');
+        if(!left){
+          left = document.createElement('div');
+          left.className = 'left';
+          row.appendChild(left);
+        }
+
+        let placeSpan = left.querySelector('.place');
+        if(!placeSpan){ placeSpan = document.createElement('div'); placeSpan.className = 'place'; left.appendChild(placeSpan); }
+        placeSpan.textContent = placeLabel;
+
+        let nameSpan = left.querySelector('.name');
+        if(!nameSpan){ nameSpan = document.createElement('div'); nameSpan.className = 'name'; left.appendChild(nameSpan); }
+        nameSpan.textContent = cls;
+
+        let trendSpan = left.querySelector('.trend');
+        if(!trendSpan){ trendSpan = document.createElement('div'); left.appendChild(trendSpan); }
+        trendSpan.className   = 'trend ' + trendClass;
+        trendSpan.textContent = trendSymbol;
+
+        let ptsSpan = row.querySelector('.pts');
+        if(!ptsSpan){ ptsSpan = document.createElement('div'); ptsSpan.className = 'pts'; row.appendChild(ptsSpan); }
+
+        const prevVal = displayedScores[cls];
+        if(prevVal === undefined){
+          animateCounter(ptsSpan, 0, numPts, 1200);
+        } else if(prevVal !== numPts){
+          animateCounter(ptsSpan, prevVal, numPts, 800);
+        } else {
+          ptsSpan.textContent = numPts + ' pts';
+        }
+        displayedScores[cls] = numPts;
+
+        // move row to correct position (appendChild moves if already in DOM)
+        lb.appendChild(row);
+      });
+
+      // STEP 3 — FLIP: measure new positions, invert, then play to final
+      requestAnimationFrame(() => {
+        lb.querySelectorAll('.class-row[data-cls]').forEach(row => {
+          const cls   = row.dataset.cls;
+          const first = firstRects[cls];
+          if(!first) return;
+          const last = row.getBoundingClientRect();
+          const dy   = first.top - last.top;
+          if(Math.abs(dy) < 1) return;
+          // snap back to old position instantly
+          row.style.transition = 'none';
+          row.style.transform  = `translateY(${dy}px)`;
+          // then animate to new position
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              row.style.transition = 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+              row.style.transform  = 'translateY(0)';
+            });
+          });
+        });
+      });
+    }
+
+    // ── render history ────────────────────────────────────────
+    function renderHistory(){
+      const box  = document.getElementById('history-box');
+      const list = document.getElementById('history-list');
+      if(!auth.currentUser || !history || history.length === 0){ box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      list.innerHTML = '';
+      history.forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'history-entry';
+        const sign        = entry.change > 0 ? '+' : '';
+        const changeClass = entry.change >= 0 ? 'pos' : 'neg';
+        div.innerHTML = `
+          <span class="h-class">${entry.cls}</span>
+          <span class="h-change ${changeClass}">${sign}${entry.change} pts</span>
+          <span style="color:#aaa;font-size:0.88rem">${entry.before} → ${entry.after} pts</span>
+          <span class="h-time">${formatTime(entry.ts)}</span>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    // ── activity logger ──────────────────────────────────────
+    function getDeviceInfo(){
+      const ua = navigator.userAgent;
+      let device = 'Desktop';
+      if(/Android/i.test(ua))       device = 'Android';
+      else if(/iPhone/i.test(ua))   device = 'iPhone';
+      else if(/iPad/i.test(ua))     device = 'iPad';
+      else if(/Macintosh/i.test(ua)) device = 'Mac';
+      else if(/Windows/i.test(ua))  device = 'Windows';
+      else if(/Linux/i.test(ua))    device = 'Linux';
+      let browser = 'Unknown';
+      if(/Edg\//i.test(ua))         browser = 'Edge';
+      else if(/Chrome/i.test(ua))   browser = 'Chrome';
+      else if(/Firefox/i.test(ua))  browser = 'Firefox';
+      else if(/Safari/i.test(ua))   browser = 'Safari';
+      return device + ' · ' + browser;
+    }
+
+    function writeLog(entry){
+      const logsRef = db.ref('logs');
+      logsRef.once('value').then(snap => {
+        let logs = snap.val() ? Object.values(snap.val()) : [];
+        logs.unshift({ ...entry, time: Date.now(), device: getDeviceInfo() });
+        logs = logs.slice(0, 100);
+        const logsObj = {};
+        logs.forEach((l, i) => logsObj[i] = l);
+        logsRef.set(logsObj);
+      }).catch(err => console.error("Log write failed:", err));
+    }
+
+    // ── reset scores ─────────────────────────────────────────
+    function resetScores(){
+      if(!auth.currentUser){ alert("Please log in first."); return; }
+      // show custom password confirmation modal
+      document.getElementById('reset-modal').style.display = 'flex';
+      document.getElementById('reset-password-input').value = '';
+      document.getElementById('reset-error').textContent = '';
+      setTimeout(() => document.getElementById('reset-password-input').focus(), 50);
+    }
+
+    function confirmReset(){
+      const pass = document.getElementById('reset-password-input').value;
+      const error = document.getElementById('reset-error');
+      if(!pass){ error.textContent = '❌ Please enter your password.'; return; }
+      error.textContent = '⏳ Verifying...';
+
+      // re-authenticate with Firebase to verify password
+      const user = auth.currentUser;
+      const credential = firebase.auth.EmailAuthProvider.credential(user.email, pass);
+      user.reauthenticateWithCredential(credential)
+        .then(() => {
+          closeResetModal();
+          const zeroed = {};
+          classes.forEach(c => zeroed[c] = 0);
+          db.ref().update({
+            scores:            zeroed,
+            previousPositions: null,
+            history:           null,
+            undoSnapshot:      null,
+            leaderHistory:     null
+          }).catch(err => { console.error("Reset failed:", err); alert("Reset failed."); });
+        })
+        .catch(err => {
+          console.error("Re-auth failed:", err.code);
+          error.textContent = '❌ Wrong password.';
+        });
+    }
+
+    function closeResetModal(){
+      document.getElementById('reset-modal').style.display = 'none';
+    }
+
+    // ── confetti ──────────────────────────────────────────────
+    const canvas  = document.getElementById('confetti-canvas');
+    const ctx     = canvas.getContext('2d');
+    let confettiParticles = [];
+    let confettiRunning   = false;
+
+    function resizeCanvas(){
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function launchConfetti(){
+      resizeCanvas();
+      confettiParticles = [];
+      const colors = ['#ffd700','#00f6ff','#ff4081','#69ff47','#ff9800','#e040fb','#ffffff'];
+      for(let i = 0; i < 160; i++){
+        confettiParticles.push({
+          x:      Math.random() * canvas.width,
+          y:      Math.random() * canvas.height - canvas.height,
+          w:      Math.random() * 10 + 5,
+          h:      Math.random() * 5 + 3,
+          color:  colors[Math.floor(Math.random() * colors.length)],
+          rot:    Math.random() * Math.PI * 2,
+          rotSpd: (Math.random() - 0.5) * 0.15,
+          vx:     (Math.random() - 0.5) * 3,
+          vy:     Math.random() * 4 + 2,
+          alpha:  1
+        });
+      }
+      if(!confettiRunning) animateConfetti();
+    }
+
+    function animateConfetti(){
+      confettiRunning = true;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      confettiParticles.forEach(p => {
+        p.x   += p.vx;
+        p.y   += p.vy;
+        p.rot += p.rotSpd;
+        if(p.y > canvas.height * 0.7) p.alpha -= 0.012;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+      });
+      confettiParticles = confettiParticles.filter(p => p.alpha > 0);
+      if(confettiParticles.length > 0){
+        requestAnimationFrame(animateConfetti);
+      } else {
+        confettiRunning = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // track which class the user has already seen leading
+    // stored in localStorage so it persists across page loads
+    let seenLeader = localStorage.getItem('seenLeader') || null;
+
+    function checkConfetti(){
+      const sorted = Object.entries(scores)
+        .filter(([cls]) => classes.includes(cls))
+        .sort((a,b) => Number(b[1]) - Number(a[1]));
+      if(sorted.length === 0) return;
+      const currentLeader = sorted[0][0];
+      if(currentLeader !== seenLeader){
+        seenLeader = currentLeader;
+        localStorage.setItem('seenLeader', currentLeader);
+        launchConfetti();
+      }
+    }
+
+    // ── Firebase listeners ────────────────────────────────────
+    db.ref('scores').on('value', snap => {
+      scores = snap.val() || {};
+      classes.forEach(c => { if(scores[c] === undefined) scores[c] = 0; });
+      renderLeaderboard();
+      checkConfetti();
+    }, err => console.error("Firebase read failed:", err));
+
+    db.ref('previousPositions').on('value', snap => {
+      previousPositions = snap.val() || {};
+      renderLeaderboard();
+    }, err => console.error("previousPositions read failed:", err));
+
+    db.ref('history').on('value', snap => {
+      history = snap.val() || [];
+      renderHistory();
+    }, err => console.error("history read failed:", err));
+
+    db.ref('undoSnapshot').on('value', snap => {
+      lastSnapshot = snap.val() || null;
+      const btn = document.getElementById('undo-btn');
+      if(btn) btn.disabled = !lastSnapshot;
+    }, err => console.error("undoSnapshot read failed:", err));
+
+    // ── help ──────────────────────────────────────────────────
+    function toggleHelp(){
+      const modal  = document.getElementById('help-modal');
+      const hidden = modal.style.display === 'none' || modal.style.display === '';
+      modal.style.display = hidden ? 'block' : 'none';
+      modal.setAttribute('aria-hidden', !hidden);
+    }
+
+    document.addEventListener('click', e => {
+      const modal = document.getElementById('help-modal');
+      const btn   = document.getElementById('help-btn');
+      if(modal.style.display === 'block' && !modal.contains(e.target) && e.target !== btn)
+        modal.style.display = 'none';
+    });
+
+    // ── keyboard ──────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      const a = document.activeElement;
+      if(e.key === 'Enter'){
+        if(a && (a.id === 'username' || a.id === 'password')) login();
+        else if(a && a.id === 'points-input') updatePoints();
+        else if(a && a.id === 'reset-password-input') confirmReset();
+      }
+      if(e.key === 'Escape') closeResetModal();
+    });
+  </script>
+</body>
+</html>
