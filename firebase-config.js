@@ -1,9 +1,9 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyBxJnZn77x2LUPORIW8nxvQqLE2Qg95aUs",
-  authDomain: "creascola-leaderboard.firebaseapp.com",
-  databaseURL: "https://creascola-leaderboard-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "creascola-leaderboard",
-  storageBucket: "creascola-leaderboard.appspot.com",
-  messagingSenderId: "227185192602",
-  appId: "1:227185192602:web:e1a6953c07ac3aa888f923"
+  apiKey: "AIzaSyCl7wsIHzdHcmnJSMZZCieacZROxlJnxvI",
+  authDomain: "creacredit-szuper1212856.firebaseapp.com",
+  projectId: "creacredit-szuper1212856",
+  storageBucket: "creacredit-szuper1212856.firebasestorage.app",
+  messagingSenderId: "480853534754",
+  appId: "1:480853534754:web:2a903e866333a8e759427b",
+  measurementId: "G-Z67C8VN01S"
 };
